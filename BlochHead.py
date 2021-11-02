@@ -38,16 +38,20 @@ class Delay:
 
         self.T1 = T1
         self.T2 = T2
-        self.M0 = M0
+
+        M0 = np.asarray(M0, dtype=float)
+        if len(M0.shape) == 1:
+            M0 = np.tile(M0, (len(offsets), 1))
+
         self.time = np.arange(0, delay_time + np.finfo(float).eps, time_step)
         self.M = []
         offsets = np.atleast_1d(offsets)
-        for offset in offsets:
-            self.dM = np.array([[  -1/T2, offset,     0],
-                                [-offset,  -1/T2,     0],
+        for i, offset in enumerate(offsets):
+            self.dM = np.array([[  -1/T2, -offset,     0],
+                                [offset,  -1/T2,     0],
                                 [      0,      0, -1/T1]])
 
-            self.M.append(odeint(self.dMdt, M0, self.time))
+            self.M.append(odeint(self.dMdt, M0[i], self.time))
 
         self.M = np.squeeze(self.M)
 
