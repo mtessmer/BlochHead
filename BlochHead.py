@@ -2,31 +2,47 @@ from numbers import Number
 import numpy as np
 from scipy.integrate import odeint
 import PulseShape
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 
 gamma_e = 1.760859644e2  # Electron Gyromagnetic Ratio in kRad/(us*T)
 QbandFreq = 35e3         # MHz
 QbandField = 1.2489e3    # Tesla
 
 
-class SpinSystem:
+class Spin:
 
-    def __init__(self, M0, Meq=np.array([0, 0, 1]), gyro=gamma_e, B0=QbandField,
-                 T1=np.inf, T2=np.inf, frame='rotating', offset=0):
+    def __init__(self, M0=np.array([0, 0, 1]), T1=np.inf, T2=np.inf, offsets=0, Meq=np.array([0, 0, 1]),
+                 gyro=gamma_e, B0=QbandField, frame='rotating', **kwargs):
+
         if T1 < T2:
             T2 = T1
-
         self.M0 = M0
+        self.T1 = T1
+        self.T2 = T2
+        self.offsets = offsets
+        self.time_step = kwargs.get('time_step', None)
+
+
+        # Future stuff
         self.Meq = Meq
         self.gyro = gyro
         self.B0 = np.array([0, 0, B0]) if isinstance(B0, Number) else B0
-        self.T1 = T1
-        self.T2 = T2
         self.frame = frame
-        self.offset = offset
 
 
 class Delay:
+    def __init__(self, delay_time, **kwargs):
+        self.delay_time = delay_time
+        self.__dict__.update(kwargs)
 
+class Pulse:
+    def __init__(self, pulse_time, flip, **kwargs):
+        self.pulse_time = pulse_time
+        self.flip = flip
+
+class ActualDelay:
     def __init__(self, M0, delay_time, time_step=None, T1=np.inf, T2=np.inf, offsets=0):
         """
 
@@ -61,7 +77,7 @@ class Delay:
         return dM
 
 
-class Pulse(PulseShape.Pulse):
+class ActualPulse(PulseShape.Pulse):
 
     def __init__(self, pulse_time, time_step=None, flip=np.pi, mwFreq=33.80,
                  amp=None, Qcrit=None, freq=0, phase=0, type='rectangular',  **kwargs):
@@ -69,10 +85,68 @@ class Pulse(PulseShape.Pulse):
         super().__init__(pulse_time, time_step, flip, mwFreq, amp,
                          Qcrit, freq, phase, type, trajectory=True, **kwargs)
 
-# class BlochHead:
-#
-#     def __init__(self, sequence, M0=np.arary([0, 0, 1]), offsets=None):
-#
-#         Traj = []
-#         for event in sequence:
-#             itraj = event.M
+class BlochHead:
+
+    def __init__(self, spin, sequence):
+        self.M0 = spin.M0
+        self.offsets = np.atleast_1d(spin.offsets)
+        self.time = [[0]]
+        self.M = [np.array([self.M0.copy() for i in range(len(self.offsets))])]
+        if len(self.offsets) > 1:
+            self.M[0] = self.M[0][:, None, :]
+
+        self.time_step = spin.time_step
+
+        for event in sequence:
+            if self.time_step is not None:
+                event.time_step = self.time_step
+
+            if isinstance(event, Pulse):
+                Event = ActualPulse(M0=self.M[-1][..., -1, :].copy(), offsets=self.offsets, **event.__dict__)
+            elif isinstance(event, Delay):
+                Event = ActualDelay(M0=self.M[-1][..., -1, :].copy(), offsets=self.offsets, **event.__dict__)
+            else:
+                raise ValueError('`sequence` must be an ordered container filled with Pulse and Delay objects')
+
+            self.time.append(Event.time + self.time[-1][-1])
+            self.M.append(Event.M)
+
+            if self.time_step is None:
+                self.time_step = Event.time_step
+
+        self.time = np.concatenate(self.time[1:])
+
+        self.M = np.concatenate(self.M, axis=-2)
+
+    def save(self, filename='animation.mp4'):
+
+        fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
+        # draw sphere
+        u, v = np.mgrid[0:2 * np.pi:50j, 0:np.pi:25j]
+        x = np.cos(u) * np.sin(v)
+        y = np.sin(u) * np.sin(v)
+        z = np.cos(v)
+        ax.plot_surface(x, y, z, cmap=plt.cm.viridis, alpha=0.2)
+
+        ax.set_xlim(-1.1, 1.1)
+        ax.set_ylim(-1.1, 1.1)
+        ax.set_zlim(-1.1, 1.1)
+
+        if len(self.M.shape) > 2:
+            quivers = [ax.quiver(0, 0, 0, *self.M[i, 0]) for i in range(len(self.offsets))]
+        else:
+            quivers = [ax.quiver(0, 0, 0, *self.M[0])]
+
+        def update(t):
+            nonlocal quivers
+            for i, quiver in enumerate(quivers):
+                quiver.remove()
+                if len(self.M.shape) > 2:
+                    quivers[i] = ax.quiver(0, 0, 0, *self.M[i, t])
+                else:
+                    quivers[i] = ax.quiver(0, 0, 0, *self.M[t])
+
+        print('we made it this far and we have {len(self.time)} frames!')
+        ani = FuncAnimation(fig, update, frames=np.arange(len(self.time)), interval=10)
+
+        ani.save('animation.mp4')
