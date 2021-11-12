@@ -51,7 +51,7 @@ class ActualDelay:
         """
         if T1 < T2:
             T2 = T1
-
+        offsets = np.atleast_1d(offsets)
         self.T1 = T1
         self.T2 = T2
 
