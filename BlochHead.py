@@ -199,7 +199,7 @@ class BlochHead:
 
         self.M = np.concatenate(self.M, axis=-2)
 
-    def save(self, filename='animation.mp4'):
+    def save(self, filename='animation.mp4', ts_per_frame=20):
 
         fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
         plt.axis('off')
@@ -212,6 +212,7 @@ class BlochHead:
         ax.plot([0, 0], [0, 0], [-1, 1], color='k')
         ax.plot([0, 0], [-1, 1], [0, 0], color='k')
         ax.plot([-1, 1], [0, 0], [0, 0], color='k')
+
         ax.plot(xs[zs == np.abs(zs).min()], ys[zs == np.abs(zs).min()], np.zeros(50), color='k', alpha=0.2)
         ax.plot(np.zeros(50), xs[zs == np.abs(zs).min()], ys[zs == np.abs(zs).min()], color='k', alpha=0.2)
         ax.plot_surface(xs, ys, zs, cmap=plt.cm.viridis, alpha=0.2)
@@ -245,6 +246,6 @@ class BlochHead:
                 ax.add_artist(quivers[i])
             Pbar.update(1)
 
-        ani = FuncAnimation(fig, update, frames=np.arange(len(self.time)), interval=10)
+        ani = FuncAnimation(fig, update, frames=np.arange(0, len(self.time), ts_per_frame), interval=ts_per_frame * 10)
 
         ani.save(filename)
