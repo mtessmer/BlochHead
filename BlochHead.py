@@ -172,18 +172,26 @@ class BlochHead:
             if self.time_step is not None:
                 event.time_step = self.time_step
 
+            # Apply user specific offset shift
             if hasattr(event, 'shift'):
                 self.offsets += event.shift
 
+            # Assign user specified offsets for the event
+            elif hasattr(event, 'offsets'):
+                event.offsets = np.atleast_1d(offsets)
+                if len(offsets) != len(self.offsets):
+                    raise ValueError('A new set offsets must be the same size as the original set of offsets')
+                self.offsets = event.offset.copy()
+
+            # Compute the vector over the event
             if isinstance(event, Pulse):
                 if not spin.pulse_offsets:
                     offsets = np.zeros(len(self.offsets))
-                else:
-                    offsets = self.offsets
-
                 Event = ActualPulse(M0=self.M[-1][..., -1, :].copy(), offsets=offsets, **event.__dict__)
+
             elif isinstance(event, Delay):
                 Event = ActualDelay(M0=self.M[-1][..., -1, :].copy(), offsets=self.offsets, **event.__dict__)
+
             else:
                 raise ValueError('`sequence` must be an ordered container filled with Pulse and Delay objects')
 
@@ -196,7 +204,6 @@ class BlochHead:
                 self.time_step = Event.time_step
 
         self.time = np.concatenate(self.time[1:])
-
         self.M = np.concatenate(self.M, axis=-2)
 
     def save(self, filename='animation.mp4', ts_per_frame=20):
