@@ -5,10 +5,28 @@ import PulseShape
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation, FFMpegWriter
+from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d import proj3d
+
+
+class Arrow3D(FancyArrowPatch):
+    def __init__(self, xs, ys, zs, *args, **kwargs):
+        FancyArrowPatch.__init__(self, (0, 0), (0, 0), *args, **kwargs)
+        self._verts3d = xs, ys, zs
+
+    def draw(self, renderer):
+        xs3d, ys3d, zs3d = self._verts3d
+        xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, renderer.M)
+        self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
+        FancyArrowPatch.draw(self, renderer)
+
 
 gamma_e = 1.760859644e2  # Electron Gyromagnetic Ratio in kRad/(us*T)
 QbandFreq = 35e3         # MHz
 QbandField = 1.2489e3    # Tesla
+
+
+
 
 
 class Spin:
@@ -173,32 +191,48 @@ class BlochHead:
     def save(self, filename='animation.mp4'):
 
         fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
+        plt.axis('off')
         # draw sphere
         u, v = np.mgrid[0:2 * np.pi:50j, 0:np.pi:25j]
-        x = np.cos(u) * np.sin(v)
-        y = np.sin(u) * np.sin(v)
-        z = np.cos(v)
-        ax.plot_surface(x, y, z, cmap=plt.cm.viridis, alpha=0.2)
+        xs = np.cos(u) * np.sin(v)
+        ys = np.sin(u) * np.sin(v)
+        zs = np.cos(v)
+        ax.set_box_aspect(aspect=(1, 1, 1))
+        ax.plot([0, 0], [0, 0], [-1, 1], color='k')
+        ax.plot([0, 0], [-1, 1], [0, 0], color='k')
+        ax.plot([-1, 1], [0, 0], [0, 0], color='k')
+        ax.plot(xs[zs == np.abs(zs).min()], ys[zs == np.abs(zs).min()], np.zeros(50), color='k', alpha=0.2)
+        ax.plot(np.zeros(50), xs[zs == np.abs(zs).min()], ys[zs == np.abs(zs).min()], color='k', alpha=0.2)
+        ax.plot_surface(xs, ys, zs, cmap=plt.cm.viridis, alpha=0.2)
 
         ax.set_xlim(-1.1, 1.1)
         ax.set_ylim(-1.1, 1.1)
         ax.set_zlim(-1.1, 1.1)
 
         if len(self.M.shape) > 2:
-            quivers = [ax.quiver(0, 0, 0, *self.M[i, 0]) for i in range(len(self.offsets))]
+            quivers = [Arrow3D(*list(zip([0, 0, 0], self.M[i, 0])),
+                               mutation_scale=20, lw=3, arrowstyle="-|>", color="C0")
+                       for i in range(len(self.offsets))]
         else:
-            quivers = [ax.quiver(0, 0, 0, *self.M[0])]
+            quivers = [Arrow3D(*list(zip([0, 0, 0], self.M[0])),
+                               mutation_scale=20, lw=3, arrowstyle="-|>", color="C0")]
+
+        [ax.add_artist(quiver) for quiver in quivers]
 
         def update(t):
             nonlocal quivers
             for i, quiver in enumerate(quivers):
                 quiver.remove()
-                if len(self.M.shape) > 2:
-                    quivers[i] = ax.quiver(0, 0, 0, *self.M[i, t])
-                else:
-                    quivers[i] = ax.quiver(0, 0, 0, *self.M[t])
 
-        print('we made it this far and we have {len(self.time)} frames!')
+                if len(self.M.shape) > 2:
+                    quivers[i] = Arrow3D(*list(zip([0, 0, 0], self.M[i, t])),
+                               mutation_scale=20, lw=3, arrowstyle="-|>", color="C0")
+                else:
+                    quivers[i] = Arrow3D(*list(zip([0, 0, 0], self.M[t])),
+                               mutation_scale=20, lw=3, arrowstyle="-|>", color="C0")
+
+                ax.add_artist(quivers[i])
+
         ani = FuncAnimation(fig, update, frames=np.arange(len(self.time)), interval=10)
 
         ani.save('animation.mp4')
