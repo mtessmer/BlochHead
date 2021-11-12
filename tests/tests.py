@@ -41,14 +41,8 @@ def test_dealy_offsets():
         np.testing.assert_almost_equal(D1.M[i, :, 2], Mz)
 
 
-def test_T1():
-    D1 = ActualDelay(np.array([0, 1, 0]), 0.2, T1=0.02, time_step=1e-6)
-    print(np.linalg.norm(D1.M, axis=1))
-    import matplotlib.pyplot as plt
-    plt.plot(D1.time, D1.M[:, 0])
-    plt.plot(D1.time, D1.M[:, 1])
-    plt.plot(D1.time, D1.M[:, 2])
-    plt.show()
+def test_delay_interface():
+    D1 = Delay(time)
 
 def test_BlochHead():
 
@@ -193,3 +187,6 @@ def test_BlochOffset():
     block = BlochHead(spin, events)
 
     block.save()
+
+
+# TODO: test for passing kwargs to Pulse and Delay events

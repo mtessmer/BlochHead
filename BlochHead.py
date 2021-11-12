@@ -16,6 +16,19 @@ class Spin:
     def __init__(self, M0=np.array([0, 0, 1]), T1=np.inf, T2=np.inf, offsets=0, Meq=np.array([0, 0, 1]),
                  gyro=gamma_e, B0=QbandField, frame='rotating', **kwargs):
 
+        """
+        Spin system being used in the experiment
+        :param M0:
+        :param T1:
+        :param T2:
+        :param offsets:
+        :param Meq:
+        :param gyro:
+        :param B0:
+        :param frame:
+        :param kwargs:
+        """
+
         if T1 < T2:
             T2 = T1
         self.M0 = M0
@@ -33,21 +46,60 @@ class Spin:
 
 
 class Delay:
+
     def __init__(self, delay_time, **kwargs):
+        """
+        A Delay event object. Used to setup delays for a sequence in a pulsed experiment.Sequences of pulses and delays
+        are used to create a BlochHead object which will simulate the experiment.
+
+        :param delay_time: float
+            The amount of time for the delay
+
+        :param kwargs:
+            Additional arguments that are passed to ActualDelay objects
+
+        """
         self.delay_time = delay_time
         self.__dict__.update(kwargs)
 
 class Pulse:
+
     def __init__(self, pulse_time, flip, **kwargs):
+        """
+        A Pulse event object. Used to setup pulses for a sequence in a pulsed experiment.Sequences of pulses and delays
+        are used to create a BlochHead object which will simulate the experiment.
+
+        :param pulse_time: float
+            The amount of time over which the pulse is applied.
+
+        :param flip: float
+            The angle (in radians) the magnetization vector is flipped
+
+        :param kwargs:
+            Additional arguments that are  passed to ActualPulse objects
+        """
         self.pulse_time = pulse_time
         self.flip = flip
+        self.__dict__.update(kwargs)
+
 
 class ActualDelay:
     def __init__(self, M0, delay_time, time_step=None, T1=np.inf, T2=np.inf, offsets=0):
         """
+        ActualDelay is more of a backend object that is used by BlochHead to perform a Bloch sphere simulation. Creation
+        of a ActualDelay object requires an M0 initial magnetization vector in addition to a delay_time. While
+        ActualDelay objects are lower level objects they can still be used to create simulations without the BlochHead
+        object and offer a little more customization.
 
-        :param deay_time:
-        :param M0:
+        :param M0: numpy.ndarray
+            D3 Vector or list/array of 3D vectors corresponding to the initial values of the magnetization vector or
+            offsets at the beginning of the delay.
+
+        :param delay_time: float  
+        :param time_step:
+        :param T1:
+        :param T2:
+        :param offsets:
         """
         if T1 < T2:
             T2 = T1
