@@ -1,5 +1,6 @@
 from numbers import Number
 import numpy as np
+from tqdm import tqdm
 from scipy.integrate import odeint
 import PulseShape
 import matplotlib.pyplot as plt
@@ -54,7 +55,7 @@ class Spin:
         self.T2 = T2
         self.offsets = offsets
         self.time_step = kwargs.get('time_step', None)
-
+        self.pulse_offsets = kwargs.get('pulse_offsets', False)
 
         # Future stuff
         self.Meq = Meq
@@ -102,7 +103,7 @@ class Pulse:
 
 
 class ActualDelay:
-    def __init__(self, M0, delay_time, time_step=None, T1=np.inf, T2=np.inf, offsets=0):
+    def __init__(self, M0, delay_time, time_step=None, T1=np.inf, T2=np.inf, offsets=0, **kwargs):
         """
         ActualDelay is more of a backend object that is used by BlochHead to perform a Bloch sphere simulation. Creation
         of a ActualDelay object requires an M0 initial magnetization vector in addition to a delay_time. While
@@ -167,19 +168,29 @@ class BlochHead:
 
         self.time_step = spin.time_step
 
-        for event in sequence:
+        for i, event in enumerate(sequence):
             if self.time_step is not None:
                 event.time_step = self.time_step
 
+            if hasattr(event, 'shift'):
+                self.offsets += event.shift
+
             if isinstance(event, Pulse):
-                Event = ActualPulse(M0=self.M[-1][..., -1, :].copy(), offsets=self.offsets, **event.__dict__)
+                if not spin.pulse_offsets:
+                    offsets = np.zeros(len(self.offsets))
+                else:
+                    offsets = self.offsets
+
+                Event = ActualPulse(M0=self.M[-1][..., -1, :].copy(), offsets=offsets, **event.__dict__)
             elif isinstance(event, Delay):
                 Event = ActualDelay(M0=self.M[-1][..., -1, :].copy(), offsets=self.offsets, **event.__dict__)
             else:
                 raise ValueError('`sequence` must be an ordered container filled with Pulse and Delay objects')
 
-            self.time.append(Event.time + self.time[-1][-1])
-            self.M.append(Event.M)
+            # 1st time point is a repeat of M[-1] from the previous event
+            idx = 0 if i == 0 else 1
+            self.time.append(Event.time[idx:] + self.time[-1][-1])
+            self.M.append(Event.M[..., idx:, :])
 
             if self.time_step is None:
                 self.time_step = Event.time_step
@@ -218,7 +229,7 @@ class BlochHead:
                                mutation_scale=20, lw=3, arrowstyle="-|>", color="C0")]
 
         [ax.add_artist(quiver) for quiver in quivers]
-
+        Pbar = tqdm(total=len(self.time))
         def update(t):
             nonlocal quivers
             for i, quiver in enumerate(quivers):
@@ -232,7 +243,8 @@ class BlochHead:
                                mutation_scale=20, lw=3, arrowstyle="-|>", color="C0")
 
                 ax.add_artist(quivers[i])
+            Pbar.update(1)
 
         ani = FuncAnimation(fig, update, frames=np.arange(len(self.time)), interval=10)
 
-        ani.save('animation.mp4')
+        ani.save(filename)
