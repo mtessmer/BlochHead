@@ -5,6 +5,7 @@ from BlochHead import Pulse, Delay, Spin, ActualDelay, ActualPulse, BlochHead
 
 T1, T2 = 100, 40  # us
 
+
 def test_delay():
 
     D1 = ActualDelay(np.array([0, 1, 0]), 1e3, T1=T1, T2=T2, time_step=1)
@@ -25,7 +26,7 @@ def test_delay_offset():
     np.testing.assert_almost_equal(Mxy, ExpMxy, decimal=6)
 
 
-def test_dealy_offsets():
+def test_delay_offsets():
     D1 = ActualDelay(np.array([0, 1, 0]), 200, T1=T1, T2=T2, offsets=[-1, 0, 1], time_step=0.1)
 
     # Test  Mx +/- 1 offsets are  equal and opposite and that Mx 0 offset is 0
@@ -40,47 +41,44 @@ def test_dealy_offsets():
     for i in range(3):
         np.testing.assert_almost_equal(D1.M[i, :, 2], Mz)
 
+delay_interface_args = [{},
+                        {'M0': [0, 1, 0]},
+                        {'M0': [0, 0, -1], 'time_step': 0.1},
+                        {'M0': [0, 1, 0], 'T1': 100, 'T2': 10},
+                        {'M0': [0, 1, 0], 'offsets': np.array([-1, 0, 1])}]
 
-def test_delay_interface():
-    D1 = Delay(time)
+@pytest.mark.parametrize('args', delay_interface_args)
+def test_delay_interface(args):
+    D1 = Delay(delay_time=0.5, **args)
+    if args == {}:
+        with pytest.raises(TypeError):
+            ActualD1 = ActualDelay(**D1.__dict__)
+    else:
+        ActualD1 = ActualDelay(**D1.__dict__)
 
-def test_BlochHead():
 
-    P1 = ActualPulse(pulse_time=0.016, flip=np.pi/2)
-    D1 = ActualDelay(M0=P1.M[-1], delay_time=0.1, T1=0.2, time_step=P1.time_step)
-    P2 = ActualPulse(pulse_time=0.016, flip=np.pi, M0=D1.M[-1])
-    D2 = ActualDelay(M0=P2.M[-1], delay_time=0.1, T1=0.2, time_step=P1.time_step)
+def test_actual_sequence():
+
+    P1 = ActualPulse(pulse_time=0.016, flip=np.pi/2, offsets=0)
+    D1 = ActualDelay(M0=P1.M[-1], delay_time=0.1, T1=0.2, time_step=P1.time_step, offsets=0)
+    P2 = ActualPulse(pulse_time=0.016, flip=np.pi, M0=D1.M[-1].copy(), offsets=0)
+    D2 = ActualDelay(M0=P2.M[-1].copy(), delay_time=0.1, T1=0.2, time_step=P1.time_step, offsets=0)
 
     M, time = [], [[0]]
-    for Event in [P1, D1, P2, D2]:
-        time.append(Event.time + time[-1][-1])
-        M.append(Event.M)
+    for i, Event in enumerate([P1, D1, P2, D2]):
+        idx = 0 if i == 0 else 1
+        time.append(Event.time[idx:] + time[-1][-1])
+        M.append(Event.M[..., idx:, :])
 
     time = np.concatenate(time[1:])
     M = np.concatenate(M)
 
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    from matplotlib.animation import FuncAnimation, FFMpegWriter
+    with np.load('test_data/actual_sequence.npz') as f:
+        tans = f['time']
+        Mans = f['M']
 
-    fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
-
-
-    ax.set_xlim(-1, 1)
-    ax.set_ylim(-1, 1)
-    ax.set_zlim(-1, 1)
-
-    quiver = ax.quiver(0, 0, 0, *M[0])
-    def update(t):
-        nonlocal quiver
-        quiver.remove()
-        quiver = ax.quiver(0, 0, 0, *M[t])
-    print(len(time))
-    ani = FuncAnimation(fig, update, frames=np.arange(len(time)), interval=50)
-
-    ani.save('animation.mp4')
-    plt.show()
-
+    np.testing.assert_allclose(tans, time)
+    np.testing.assert_allclose(Mans, M)
 
 def test_BlochHead():
 
@@ -174,19 +172,50 @@ def test_BlochBasic():
 
     block.save()
 
-def test_BlochOffset():
+def test_deer1():
 
-    offsets = np.linspace(-1, 1, 10)
+    offsets = np.linspace(-1, 1, 11)
     spin = Spin(offsets=offsets, time_step=0.001)
 
-    events = [Pulse(pulse_time=0.016, flip=np.pi/2),
+    events = [Delay(delay_time=0.05),
+              Pulse(pulse_time=0.025, flip=np.pi/2),
               Delay(delay_time=0.4),
-              Pulse(pulse_time=0.016, flip=np.pi),
-              Delay(delay_time=0.45)]
+              Pulse(pulse_time=0.05, flip=np.pi),
+              Delay(delay_time=0.4),
+              Delay(delay_time=0.6, shift=-18.5),
+              Pulse(pulse_time=0.05, flip=np.pi),
+              Delay(delay_time=0.63)]
 
     block = BlochHead(spin, events)
 
-    block.save()
+    block.save('deer1.mp4', ts_per_frame=5)
+
+def test_deer2():
+
+    offsets = np.linspace(-1, 1, 11)
+    spin = Spin(M0=[0, 1, 0], offsets=offsets, time_step=0.001)
+
+    events = [Delay(delay_time=0.2),
+              Delay(delay_time=0.4, shift=-18.5),
+              Pulse(pulse_time=0.05, flip=np.pi),
+              Delay(delay_time=0.6)]
+
+    block = BlochHead(spin, events)
+
+    block.save('deer2.mp4', ts_per_frame=5)
 
 
+def test_deer3():
+
+    offsets = np.linspace(-1, 1, 11)
+    spin = Spin(M0=[0, 1, 0], offsets=offsets, time_step=0.001)
+
+    events = [Delay(delay_time=0.37),
+              Delay(delay_time=0.23, shift=-18.5),
+              Pulse(pulse_time=0.05, flip=np.pi),
+              Delay(delay_time=0.6)]
+
+    block = BlochHead(spin, events)
+
+    block.save('deer3.mp4', ts_per_frame=5)
 # TODO: test for passing kwargs to Pulse and Delay events

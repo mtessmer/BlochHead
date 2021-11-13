@@ -134,9 +134,9 @@ class ActualDelay:
         self.M = []
         offsets = np.atleast_1d(offsets)
         for i, offset in enumerate(offsets):
-            self.dM = np.array([[  -1/T2, -offset,     0],
-                                [offset,  -1/T2,     0],
-                                [      0,      0, -1/T1]])
+            self.dM = np.array([[ -1/T2, -offset,     0],
+                                [offset,   -1/T2,     0],
+                                [     0,       0, -1/T1]])
 
             self.M.append(odeint(self.dMdt, M0[i], self.time))
 
