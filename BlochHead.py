@@ -190,6 +190,11 @@ class BlochHead:
                 Event = ActualPulse(M0=self.M[-1][..., -1, :].copy(), offsets=offsets, **event.__dict__)
 
             elif isinstance(event, Delay):
+                if not hasattr(event, 'T1'):
+                    event.T1 = spin.T1
+                if not hasattr(event, 'T2'):
+                    event.T1 = spin.T2
+
                 Event = ActualDelay(M0=self.M[-1][..., -1, :].copy(), offsets=self.offsets, **event.__dict__)
 
             else:
@@ -204,7 +209,7 @@ class BlochHead:
                 self.time_step = Event.time_step
 
         self.time = np.concatenate(self.time[1:])
-        self.M = np.concatenate(self.M, axis=-2)
+        self.M = np.concatenate(self.M[1:], axis=-2)
 
     def save(self, filename='animation.mp4', ts_per_frame=20):
 
