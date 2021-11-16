@@ -9,6 +9,7 @@ from matplotlib.animation import FuncAnimation, FFMpegWriter
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 
+#TODO: Convert offset unit to Mhz for delays
 
 class Arrow3D(FancyArrowPatch):
     def __init__(self, xs, ys, zs, *args, **kwargs):
@@ -132,7 +133,7 @@ class ActualDelay:
 
         self.time = np.arange(0, delay_time + np.finfo(float).eps, time_step)
         self.M = []
-        offsets = np.atleast_1d(offsets)
+
         for i, offset in enumerate(offsets):
             self.dM = np.array([[ -1/T2, -offset,     0],
                                 [offset,   -1/T2,     0],
@@ -185,15 +186,14 @@ class BlochHead:
 
             # Compute the vector over the event
             if isinstance(event, Pulse):
-                if not spin.pulse_offsets:
-                    offsets = np.zeros(len(self.offsets))
+                offsets = np.zeros(len(self.offsets)) if not spin.pulse_offsets else self.offsets
                 Event = ActualPulse(M0=self.M[-1][..., -1, :].copy(), offsets=offsets, **event.__dict__)
 
             elif isinstance(event, Delay):
                 if not hasattr(event, 'T1'):
                     event.T1 = spin.T1
                 if not hasattr(event, 'T2'):
-                    event.T1 = spin.T2
+                    event.T2 = spin.T2
 
                 Event = ActualDelay(M0=self.M[-1][..., -1, :].copy(), offsets=self.offsets, **event.__dict__)
 
@@ -211,7 +211,7 @@ class BlochHead:
         self.time = np.concatenate(self.time[1:])
         self.M = np.concatenate(self.M[1:], axis=-2)
 
-    def save(self, filename='animation.mp4', ts_per_frame=20):
+    def save(self, filename='animation.mp4', ts_per_frame=20, interval=10):
 
         fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
         plt.axis('off')
@@ -247,17 +247,20 @@ class BlochHead:
             nonlocal quivers
             for i, quiver in enumerate(quivers):
                 quiver.remove()
-
                 if len(self.M.shape) > 2:
-                    quivers[i] = Arrow3D(*list(zip([0, 0, 0], self.M[i, t])),
-                               mutation_scale=20, lw=3, arrowstyle="-|>", color="C0")
+                    M = self.M[i, t]
                 else:
-                    quivers[i] = Arrow3D(*list(zip([0, 0, 0], self.M[t])),
-                               mutation_scale=20, lw=3, arrowstyle="-|>", color="C0")
+                    M = self.M[t]
+
+                Magnitude = np.linalg.norm(M)
+                mutation_scale = (Magnitude / 0.5) * 20 if Magnitude < 0.5 else 20
+                quivers[i] = Arrow3D(*list(zip([0, 0, 0], M)), mutation_scale=mutation_scale,
+                                     lw=3, arrowstyle="-|>", color="C0")
+
 
                 ax.add_artist(quivers[i])
             Pbar.update(1)
 
-        ani = FuncAnimation(fig, update, frames=np.arange(0, len(self.time), ts_per_frame), interval=ts_per_frame * 10)
+        ani = FuncAnimation(fig, update, frames=np.arange(0, len(self.time), ts_per_frame), interval=10)
 
         ani.save(filename)
