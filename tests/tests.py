@@ -99,6 +99,23 @@ def test_BlochBasic():
     np.testing.assert_allclose(tans, block.time)
     np.testing.assert_allclose(Mans, block.M)
 
+
+def test_SechTanh():
+
+    spin = Spin(T1=0.5, offsets=np.linspace(-30, 30, 21), pulse_offsets=True)
+    events = [Pulse(pulse_time=0.300,
+                    time_step=1e-3,
+                    flip=np.pi,
+                    freq=[-40, 40],
+                    type='sech/tanh',
+                    beta=10),
+              Delay(delay_time=1.0)]
+
+    block = BlochHead(spin, events)
+
+    block.save('SechTanh.mp4', ts_per_frame=1)
+
+
 def test_deer1():
 
     offsets = np.linspace(-1, 1, 11)
