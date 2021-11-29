@@ -115,7 +115,7 @@ class ActualDelay:
             D3 Vector or list/array of 3D vectors corresponding to the initial values of the magnetization vector or
             offsets at the beginning of the delay.
 
-        :param delay_time: float  
+        :param delay_time: float
         :param time_step:
         :param T1:
         :param T2:
