@@ -1,1 +1,1 @@
-from BlochHead import *
+from .BlochHead import *
