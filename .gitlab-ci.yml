@@ -8,8 +8,8 @@ before_script:
 
 .test_template: &test_definition
   script:
-    - cd test
-    - pytest test.py
+    - cd tests
+    - pytest tests.py
 
 test:3.6:
   image: python:3.6
