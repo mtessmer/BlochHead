@@ -1,0 +1,28 @@
+before_script:
+  - python -V  # Print out python version for debugging
+  - pip install virtualenv
+  - virtualenv venv
+  - source venv/bin/activate
+  - pip install pytest
+  - pip install .
+
+.test_template: &test_definition
+  script:
+    - cd test
+    - pytest test.py
+
+test:3.6:
+  image: python:3.6
+  <<: *test_definition
+
+test:3.7:
+  image: python:3.7
+  <<: *test_definition
+
+test:3.8:
+  image: python:3.8
+  <<: *test_definition
+
+test:3.9:
+  image: python:3.9
+  <<: *test_definition
