@@ -8,5 +8,6 @@ setup(
     license='GNU GPLv3',
     author='Maxx Tessmer',
     author_email='mhtessmer@gmail.com',
-    description='A Bloch simulator for EPR'
+    description='A Bloch simulator for EPR',
+    install_requires=['numpy', 'scipy', 'matplotlib', 'PulseShape']
 )
