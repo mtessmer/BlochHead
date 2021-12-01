@@ -112,8 +112,9 @@ def test_SechTanh():
               Delay(delay_time=1.0)]
 
     block = BlochHead(spin, events)
+    ans = np.load('test_data/SechTanh.npy')
+    np.testing.assert_allclose(block.M, ans)
 
-    block.save('SechTanh.mp4', ts_per_frame=1)
 
 
 def test_deer1():
@@ -131,8 +132,8 @@ def test_deer1():
               Delay(delay_time=0.63)]
 
     block = BlochHead(spin, events)
-
-    block.save('deer1.mp4', ts_per_frame=5)
+    ans = np.load('test_data/deer1.npy')
+    np.testing.assert_allclose(block.M, ans)
 
 def test_deer2():
 
@@ -146,7 +147,8 @@ def test_deer2():
 
     block = BlochHead(spin, events)
 
-    block.save('deer2.mp4', ts_per_frame=5)
+    ans = np.load('test_data/deer2.npy')
+    np.testing.assert_allclose(block.M, ans)
 
 
 def test_deer3():
@@ -161,5 +163,7 @@ def test_deer3():
 
     block = BlochHead(spin, events)
 
-    block.save('deer3.mp4', ts_per_frame=5)
+    ans = np.load('test_data/deer3.npy')
+    np.testing.assert_allclose(block.M, ans)
+
 # TODO: test for passing kwargs to Pulse and Delay events
