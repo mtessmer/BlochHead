@@ -113,7 +113,7 @@ def test_SechTanh():
 
     block = BlochHead(spin, events)
     ans = np.load('test_data/SechTanh.npy')
-    np.testing.assert_allclose(block.M, ans)
+    np.testing.assert_approx_equal(block.M, ans)
 
 
 
@@ -133,7 +133,7 @@ def test_deer1():
 
     block = BlochHead(spin, events)
     ans = np.load('test_data/deer1.npy')
-    np.testing.assert_allclose(block.M, ans)
+    np.testing.assert_approx_equal(block.M, ans)
 
 def test_deer2():
 
@@ -148,7 +148,7 @@ def test_deer2():
     block = BlochHead(spin, events)
 
     ans = np.load('test_data/deer2.npy')
-    np.testing.assert_allclose(block.M, ans)
+    np.testing.assert_approx_equal(block.M, ans)
 
 
 def test_deer3():
@@ -164,6 +164,6 @@ def test_deer3():
     block = BlochHead(spin, events)
 
     ans = np.load('test_data/deer3.npy')
-    np.testing.assert_allclose(block.M, ans)
+    np.testing.assert_approx_equal(block.M, ans)
 
 # TODO: test for passing kwargs to Pulse and Delay events
