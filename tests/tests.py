@@ -106,8 +106,8 @@ def test_SechTanh():
     events = [Pulse(pulse_time=0.300,
                     time_step=1e-3,
                     flip=np.pi,
+                    shape='sech/tanh',
                     freq=[-40, 40],
-                    type='sech/tanh',
                     beta=10),
               Delay(delay_time=1.0)]
 

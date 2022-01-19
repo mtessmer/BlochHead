@@ -152,10 +152,10 @@ class ActualDelay:
 class ActualPulse(PulseShape.Pulse):
 
     def __init__(self, pulse_time, time_step=None, flip=np.pi, mwFreq=33.80,
-                 amp=None, Qcrit=None, freq=0, phase=0, type='rectangular',  **kwargs):
+                 amp=None, Qcrit=None, freq=0, phase=0, shape='rectangular', **kwargs):
 
         super().__init__(pulse_time, time_step, flip, mwFreq, amp,
-                         Qcrit, freq, phase, type, trajectory=True, **kwargs)
+                         Qcrit, freq, phase, shape, trajectory=True, **kwargs)
 
 class BlochHead:
 
