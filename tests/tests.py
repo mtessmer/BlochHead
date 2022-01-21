@@ -41,11 +41,13 @@ def test_delay_offsets():
     for i in range(3):
         np.testing.assert_almost_equal(D1.M[i, :, 2], Mz)
 
+
 delay_interface_args = [{},
                         {'M0': [0, 1, 0]},
                         {'M0': [0, 0, -1], 'time_step': 0.1},
                         {'M0': [0, 1, 0], 'T1': 100, 'T2': 10},
                         {'M0': [0, 1, 0], 'offsets': np.array([-1, 0, 1])}]
+
 
 @pytest.mark.parametrize('args', delay_interface_args)
 def test_delay_interface(args):
@@ -116,7 +118,6 @@ def test_SechTanh():
     np.testing.assert_almost_equal(block.M, ans)
 
 
-
 def test_deer1():
 
     offsets = np.linspace(-1, 1, 11)
@@ -134,6 +135,7 @@ def test_deer1():
     block = BlochHead(spin, events)
     ans = np.load('test_data/deer1.npy')
     np.testing.assert_almost_equal(block.M, ans)
+
 
 def test_deer2():
 
